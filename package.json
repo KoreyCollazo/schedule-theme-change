@@ -5,7 +5,9 @@
   "main": "server.js",
   "scripts": {
     "test": "node server.js",
-    "start": "node server.js"
+    "start": "concurrently \"npm run server\" \"npm run electron\"",
+    "server": "node server.js",
+    "electron": "electron main.js"
   },
   "repository": {
     "type": "git",
@@ -18,9 +20,19 @@
   },
   "homepage": "https://github.com/KoreyCollazo/schedule-theme-change#readme",
   "dependencies": {
+    "axios": "^1.6.5",
+    "body-parser": "^1.20.2",
     "dotenv": "^16.3.1",
+    "electron": "^28.1.2",
+    "electron-fetch": "^1.9.1",
     "express": "^4.18.2",
     "node-cron": "^3.0.3",
-    "shopify-api-node": "^3.12.7"
+    "path": "^0.12.7",
+    "shopify-api-node": "^3.12.7",
+    "socket.io": "^4.7.3",
+    "socket.io-client": "^4.7.3"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
   }
 }
