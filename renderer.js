@@ -55,8 +55,12 @@ function renderScheduledChanges(schedule) {
       changeElement.classList.add('scheduled-change');
   
       const themeName = document.createElement('span');
-      themeName.innerText = `Theme: ${change.themeName}`;
+      themeName.innerText = `Theme: ${change.themeName} `;
       changeElement.appendChild(themeName);
+  
+      const storeInfo = document.createElement('span');
+      storeInfo.innerHTML = `<b>Store: ${change.store.options.shopName}</b> `;
+      changeElement.appendChild(storeInfo);
   
       const scheduleDateTime = document.createElement('span');
       scheduleDateTime.innerText = `Scheduled for ${change.scheduleDate} at ${change.scheduleTime}`;
@@ -72,6 +76,7 @@ function renderScheduledChanges(schedule) {
       scheduledChangesContainer.appendChild(changeElement);
     });
   }
+  
   
 function deleteScheduledChange(event) {
     const index = event.target.dataset.index;
@@ -153,6 +158,23 @@ window.closeModal = function() {
     document.getElementById('scheduleModal').style.display = 'none';
   };
 
+window.switchStore = function () {
+    const storeSwitchButton = document.getElementById('storeSwitchButton');
+    const themesLabel = document.getElementById('storeThemes')
+    const currentStore = storeSwitchButton.innerText.includes('Wholesale') ? 'Retail' : 'Wholesale';
+  
+    // Update button text to the inverse of the current store
+    const inverseStore = currentStore === 'Retail' ? 'Wholesale' : 'Retail';
+    
+    // Send a message to the main process to switch the store
+    ipcRenderer.send('toggleStore');
+    
+    // Update button text after sending the message
+    storeSwitchButton.innerText = `Switch to ${currentStore.charAt(0).toUpperCase() + currentStore.slice(1)}`;
+    themesLabel.innerText = `${inverseStore} Themes`
+};
+  
+  
 function confirmSchedule() {
     const scheduleDateInput = document.getElementById('scheduleDate');
     const scheduleTimeInput = document.getElementById('scheduleTime');

@@ -29,7 +29,6 @@ const shopifyConfigStore2 = {
 const shopifyStore1 = new Shopify(shopifyConfigStore1);
 const shopifyStore2 = new Shopify(shopifyConfigStore2);
 
-// const updateInventorySchedule = '47 9 * * *';
 
 cron.schedule('* * * * *', async () => {
     // Get the current date and time
@@ -39,7 +38,7 @@ cron.schedule('* * * * *', async () => {
 
     // Iterate through the schedule array and check for scheduled events
     schedule.forEach(async (scheduledTheme, index) => {
-        const { scheduleDate, scheduleTime, themeId } = scheduledTheme;
+        const { scheduleDate, scheduleTime, themeId, store } = scheduledTheme;
 
         // Check if the current date and time match any scheduled date and time
         if (currentDateString === scheduleDate && currentTimeString === scheduleTime) {
@@ -47,14 +46,14 @@ cron.schedule('* * * * *', async () => {
 
             try {
                 // Fetch the list of themes
-                const themes = await shopifyStore1.theme.list();
+                const themes = await store.theme.list();
 
                 // Find the theme to activate
                 const themeToActivate = themes.find(theme => theme.id === +themeId);
 
                 if (themeToActivate) {
                     // Update the theme to make it the main theme
-                    await shopifyStore1.theme.update(themeToActivate.id, { role: 'main' });
+                    await store.theme.update(themeToActivate.id, { role: 'main' });
                     console.log('Theme updated successfully:', themeToActivate);
                 } else {
                     console.error('Error: Theme not found in the list');
@@ -77,53 +76,61 @@ cron.schedule('* * * * *', async () => {
 
 
 
-const listThemes = async () => {
-  try {
-    // Fetch the list of themes
-    const themes = await shopifyStore1.theme.list();
+const listThemes = async (shopifyStore) => {
+    try {
+      // Fetch the list of themes using the provided Shopify store
+      const themes = await shopifyStore.theme.list();
+  
+      // Find the currently active theme
+      const activeTheme = themes.find((theme) => theme.role === 'main');
+  
+      return { allThemes: themes, activeTheme };
+    } catch (error) {
+      console.error('Error listing themes:', error);
+    }
+  };
+  
 
-    // Find the currently active theme
-    const activeTheme = themes.find((theme) => theme.role === 'main');
+  app.get('/list-themes', async (req, res) => {
+    try {
+      // Determine the Shopify store based on the query parameter or use shopifyStore1 as default
+      const selectedStore = req.query.store === 'shopifyStore2' ? shopifyStore2 : shopifyStore1;
+  
+      // Call the listThemes function with the selected store
+      const themesData = await listThemes(selectedStore);
+  
+      res.json({ message: 'Themes listed successfully', themes: themesData });
+    } catch (error) {
+      console.error('Error:', error);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+  
+  
+  app.post('/schedule-theme', (req, res) => {
+    try {
+      const { themeId, themeName, scheduleDate, scheduleTime, currentStore } = req.body;
+      const store = (currentStore === 'shopifyStore2') ? shopifyStore2 : shopifyStore1;
+  
+      // Add the scheduled theme to the global schedule array
+      schedule.push({ themeId, themeName, scheduleDate, scheduleTime, store });
+  
+      // Log the scheduled theme data
+      console.log(schedule);
+  
+      // Emit the 'updateSchedule' event to inform connected clients
+      io.emit('updateSchedule', schedule);
+  
+      // For now, you can send a response back to the client
+      res.json({ message: 'Scheduled theme change successful' });
+    } catch (error) {
+      console.error('Error:', error);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+  
 
-    return { allThemes: themes, activeTheme };
-  } catch (error) {
-    console.error('Error listing themes:', error);
-  }
-};
-
-app.get('/list-themes', async (req, res) => {
-  try {
-    // Call the listThemes function
-    const themesData = await listThemes();
-
-    res.json({ message: 'Themes listed successfully', themes: themesData });
-  } catch (error) {
-    console.error('Error:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-});
-
-// Add this new route for handling theme scheduling
-app.post('/schedule-theme', (req, res) => {
-  try {
-    const { themeId, themeName, scheduleDate, scheduleTime } = req.body;
-
-    // Add the scheduled theme to the global schedule array
-    schedule.push({ themeId, themeName, scheduleDate, scheduleTime });
-
-    // Log the scheduled theme data
-    console.log(schedule);
-
-    // Emit the 'updateSchedule' event to inform connected clients
-    io.emit('updateSchedule', schedule);
-
-    // For now, you can send a response back to the client
-    res.json({ message: 'Scheduled theme change successful' });
-  } catch (error) {
-    console.error('Error:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-});
+  
 
 // Route to delete a scheduled change
 app.post('/delete-scheduled-change', (req, res) => {
@@ -144,7 +151,11 @@ app.post('/delete-scheduled-change', (req, res) => {
       console.error('Error:', error);
       res.status(500).json({ error: 'Internal Server Error' });
     }
-  });
+});
+
+
+  
+
 
 // Route to get the schedule array
 app.get('/get-schedule', (req, res) => {
