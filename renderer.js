@@ -84,7 +84,6 @@ function deleteScheduledChange(event) {
     // Send a message to the main process to delete the scheduled change
     ipcRenderer.send('deleteScheduledChange', index);
 
-    // Placeholder for confirming deletion (you can add your logic here)
     alert('Scheduled change deleted!');
 }
 
@@ -197,12 +196,11 @@ function confirmSchedule() {
     // Get the selected schedule date from the input
     const selectedDate = new Date(scheduleDateInput.value);
   
-    // Check if the selected date is in the future
-    // if (selectedDate <= currentDate) {
-    //   // Show an alert if the selected date is not in the future
-    //   alert('Please choose a future date.');
-    //   return; // Exit the function if the date is not valid
-    // }
+    if (selectedDate <= currentDate) {
+      // Show an alert if the selected date is not in the future
+      alert('Please choose a future date.');
+      return; // Exit the function if the date is not valid
+    }
   
     // Retrieve the theme ID and theme name from the form's data attribute
     const themeId = document.getElementById('scheduleForm').dataset.themeId;
@@ -216,7 +214,6 @@ function confirmSchedule() {
       scheduleTime: scheduleTimeInput.value,
     });
   
-    // Placeholder for confirming schedule (you can add your logic here)
     alert('Schedule confirmed!');
     closeModal();
   }

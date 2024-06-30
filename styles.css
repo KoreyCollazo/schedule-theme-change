@@ -1,7 +1,10 @@
 body {
     font-family: Arial, sans-serif;
     margin: 20px;
+    background-color: transparent;
+    
 }
+
 
 .theme {
     padding: 10px;

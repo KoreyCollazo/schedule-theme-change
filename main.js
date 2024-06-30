@@ -13,6 +13,9 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
+    opacity: 1,
+    vibrancy: "under-window",
+    visualEffectState: "followWindow",
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
@@ -20,21 +23,31 @@ function createWindow() {
   });
   const socket = io('http://localhost:3000');
   mainWindow.loadFile('index.html');
+
   socket.on('updateSchedule', async (schedule) => {
     console.log('Update the scheduling', schedule);
-    const themes = await fetchThemes();
-    mainWindow.webContents.send('updateThemes', themes, schedule);
+    if (mainWindow.webContents.getURL().includes('themeAutomation.html')) {
+      const themes = await fetchThemes();
+      mainWindow.webContents.send('updateThemes', themes, schedule);
+    }
   });
 
   mainWindow.on('closed', function () {
     mainWindow = null;
   });
 
-  // Load themes when the window is ready
+  ipcMain.on('renderThemeAutomation', () => {
+    // Load themeAutomation.html when receiving the renderThemeAutomation message
+    mainWindow.loadFile('themeAutomation.html');
+  });
+
+  // Load themes when the window is ready or after rendering themeAutomation.html
   mainWindow.webContents.on('did-finish-load', async () => {
-    const themes = await fetchThemes();
-    const schedule = await fetchSchedule();
-    mainWindow.webContents.send('updateThemes', themes, schedule);
+    if (mainWindow.webContents.getURL().includes('themeAutomation.html')) {
+      const themes = await fetchThemes();
+      const schedule = await fetchSchedule();
+      mainWindow.webContents.send('updateThemes', themes, schedule);
+    }
   });
 }
 
@@ -51,8 +64,8 @@ ipcMain.on('toggleStore', async (event) => {
   currentStore = (currentStore === 'shopifyStore1') ? 'shopifyStore2' : 'shopifyStore1';
   event.reply('toggleStoreResponse', { message: `Switched to ${currentStore} store successfully` });
   const themes = await fetchThemes(currentStore);
-    const schedule = await fetchSchedule();
-    mainWindow.webContents.send('updateThemes', themes, schedule);
+  const schedule = await fetchSchedule();
+  mainWindow.webContents.send('updateThemes', themes, schedule);
 });
 
 // Remove the fetchStore function

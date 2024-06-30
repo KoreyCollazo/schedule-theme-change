@@ -154,9 +154,6 @@ app.post('/delete-scheduled-change', (req, res) => {
 });
 
 
-  
-
-
 // Route to get the schedule array
 app.get('/get-schedule', (req, res) => {
   try {
