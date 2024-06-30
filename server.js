@@ -154,7 +154,72 @@ app.post('/delete-scheduled-change', (req, res) => {
 });
 
 
-  
+
+const batchSize = 10; // Number of products to retrieve in each request
+
+app.get('/active-products', async (req, res) => {
+  try {
+    let params = { limit: batchSize };
+    let activeProducts = [];
+
+    do {
+      const products = await shopifyStore1.product.list(params);
+
+      // Extract relevant data and filter active products
+      const filteredProducts = products.map(product => {
+        return {
+          id: product.id,
+          title: product.title,
+          status: product.status,
+          product_type: product.product_type,
+          variant: {
+            price: product.variants[0]?.price || 0,
+            sku: product.variants[0]?.sku || '',
+          },
+          images: product.images.map(image => image.src),
+          metafields: [],
+        };
+      }).filter(product => product.status === 'active');
+      
+      // Fetch and add metafields for each product
+      const metafieldsPromises = filteredProducts.map(async product => {
+        const metafields = await shopifyStore1.metafield.list({
+          metafield: { owner_resource: 'product', owner_id: product.id }
+        });
+
+        // Filter and include specific metafields
+        const filteredMetafields = metafields.filter(metafield => {
+          const allowedKeys = [
+            'case_quantity',
+            'description_tag',
+            'burn_time',
+            'scent_notes_base',
+            'scent_notes_mid',
+            'scent_notes_top',
+          ];
+          return allowedKeys.includes(metafield.key);
+        });
+
+        product.metafields = filteredMetafields;
+      });
+
+      await Promise.all(metafieldsPromises);
+
+      // Add the filtered active products to the result array
+      activeProducts = activeProducts.concat(filteredProducts);
+
+      // Get the parameters for the next page
+      params = products.nextPageParameters;
+    } while (params !== undefined);
+
+    // Send the final filtered active products data as JSON in the response
+    res.json(activeProducts);
+  } catch (error) {
+    console.error('Error fetching active products:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
 
 
 // Route to get the schedule array
